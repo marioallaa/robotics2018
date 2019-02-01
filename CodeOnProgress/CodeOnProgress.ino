@@ -1,9 +1,9 @@
 /*
- Example sketch for the Xbox Wireless Reciver library - developed by Kristian Lauszus
- It supports up to four controllers wirelessly
- For more information see the blog post: http://blog.tkjelectronics.dk/2012/12/xbox-360-receiver-added-to-the-usb-host-library/ or
- send me an e-mail:  kristianl@tkjelectronics.com
- */
+  Example sketch for the Xbox Wireless Reciver library - developed by Kristian Lauszus
+  It supports up to four controllers wirelessly
+  For more information see the blog post: http://blog.tkjelectronics.dk/2012/12/xbox-360-receiver-added-to-the-usb-host-library/ or
+  send me an e-mail:  kristianl@tkjelectronics.com
+*/
 
 #include <XBOXRECV.h>
 
@@ -17,22 +17,19 @@ USB Usb;
 XBOXRECV Xbox(&Usb);
 
 // Servos needed to collect the balls
-Servo tounge, rightArm, leftArm;
+Servo tounge, rArm, lArm;
+bool autunomusOn = false;
+int toungeVal, rightVal, leftVal;
 
-int i = 0;
-
-// Pin configuration for Movement 
-int lfPin = 4;
-int lbPin = 5;
-int rfPin = 6;
-int rbPin = 7;
-
-// pin configuration for Shotting
-int shootP = 8;
-int shootM = 9;
-int load = 10;
-int push = 11;
-
+// Pin configuration for Movement
+int lfPin = 7;
+int lbPin = 6;
+int rfPin = 5;
+int rbPin = 4;
+int relay = 8;
+// Pin configuration for GrayScale Sensors...
+int leftSensor = A0;
+int rightSensor = A1;
 
 
 void setup() {
@@ -41,13 +38,9 @@ void setup() {
   pinMode(lbPin , OUTPUT);
   pinMode(rfPin , OUTPUT);
   pinMode(rbPin , OUTPUT);
-  pinMode(shootP , OUTPUT);
-  pinMode(shootM , OUTPUT);
-  pinMode(load , OUTPUT);
-  pinMode(push , OUTPUT);
   tounge.attach(A2);
-  rightArm.attach(A3);
-  leftArm.attach(A4);
+  rArm.attach(A3);
+  lArm.attach(A4);
 #if !defined(__MIPSEL__)
   while (!Serial); // Wait for serial port to connect - used on Leonardo, Teensy and other boards with built-in USB CDC serial connection
 #endif
@@ -56,67 +49,92 @@ void setup() {
     while (1); //halt
   }
   Serial.print(F("\r\nXbox Wireless Receiver Library Started"));
+
+  pinMode(relay, OUTPUT);
 }
 void loop() {
   Usb.Task();
   if (Xbox.XboxReceiverConnected) {
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < 2; i++) {
       if (Xbox.Xbox360Connected[i]) {
         if (Xbox.getButtonPress(R2, i)  && !Xbox.getButtonClick(R1, i)) {
           Serial.print("\t R2: ");
-          Serial.print(Xbox.getButtonPress(L2, i));
+          Serial.print(Xbox.getButtonPress(R2, i));
           Serial.print("\t Without R1: ");
-          Serial.println(Xbox.getButtonPress(R2, i));
-          Xbox.setRumbleOn(Xbox.getButtonPress(L2, i), Xbox.getButtonPress(R2, i), i);
           rf(Xbox.getButtonPress(R2, i));
-        }else if (Xbox.getButtonPress(L2, i) && !Xbox.getButtonClick(L1, i)) {
-          Serial.println(Xbox.getButtonPress(R2, i));
-          Xbox.setRumbleOn(Xbox.getButtonPress(L2, i), Xbox.getButtonPress(R2, i), i);
+        }
+        if (Xbox.getButtonPress(L2, i) && !Xbox.getButtonClick(L1, i)) {
+          Serial.println(Xbox.getButtonPress(L2, i));
+          Serial.print("\t L2: ");
+          Serial.print(Xbox.getButtonPress(L2, i));
+          Serial.print("\t Without L1: ");
           lf(Xbox.getButtonPress(L2, i));
-        }else if (Xbox.getButtonPress(L1, i)  && !Xbox.getButtonPress(L2, i)){
+        }
+        if (Xbox.getButtonPress(L1, i) && !Xbox.getButtonPress(L2, i)) {
           Serial.println(F("L1"));
           Serial.print("\tWithout L2: ");
           lb();
-          }else if (Xbox.getButtonPress(R1, i) && !Xbox.getButtonPress(R2, i)){
+        }
+        if (Xbox.getButtonPress(R1, i) && !Xbox.getButtonPress(R2, i)) {
           Serial.println(F("R1"));
           Serial.print("\tWithout R2: ");
           rb();
-        }else{
-          s();
-          
+        } 
+        if(!Xbox.getButtonPress(L1, i) && !Xbox.getButtonPress(L2, i) ) {
+          ls();
+        }
+        if( !Xbox.getButtonPress(R1, i) && !Xbox.getButtonPress(R2, i)) {
+          rs();
         }
 
 
 
 
-        
-
         if (Xbox.getAnalogHat(LeftHatX, i) > 7500 || Xbox.getAnalogHat(LeftHatX, i) < -7500 || Xbox.getAnalogHat(LeftHatY, i) > 7500 || Xbox.getAnalogHat(LeftHatY, i) < -7500 || Xbox.getAnalogHat(RightHatX, i) > 7500 || Xbox.getAnalogHat(RightHatX, i) < -7500 || Xbox.getAnalogHat(RightHatY, i) > 7500 || Xbox.getAnalogHat(RightHatY, i) < -7500) {
-          if (Xbox.getAnalogHat(LeftHatX, i) > 7500) {
-            Serial.print(F("LeftHatX: "));
-            Serial.print(Xbox.getAnalogHat(LeftHatX, i));
-            Serial.print("\t");
-            
-          }
-          if (Xbox.getAnalogHat(LeftHatX, i) < -7500) {
-            Serial.print(F("LeftHatX: "));
-            Serial.print(Xbox.getAnalogHat(LeftHatX, i));
-            Serial.print("\t");
-            
-          }
-          if (Xbox.getAnalogHat(RightHatX, i) > 7500) {
-            Serial.print(F("RightHatX: "));
-            Serial.print(Xbox.getAnalogHat(RightHatX, i));
-            Serial.print("\t");
-          
-          }
-          if (Xbox.getAnalogHat(RightHatX, i) < -7500) {
-            Serial.print(F("RightHatX: "));
-            Serial.print(Xbox.getAnalogHat(RightHatX, i));
-            Serial.print("\t");
-          }
 
-          
+
+          ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+          if (Xbox.getAnalogHat(LeftHatX, i) > 7500 && leftVal > 0) {       // //          Mbylle krahun e majte
+            Serial.print(F("LeftHatX: "));
+            Serial.print(Xbox.getAnalogHat(LeftHatX, i));
+            Serial.print("\t Writing Left Arm Value : ");
+            delay(10);
+            leftVal -=2;
+            Serial.println(leftVal);
+            lArm.write(leftVal);
+
+          }
+          if (Xbox.getAnalogHat(LeftHatX, i) < -7500 && leftVal < 160) {      // //          Hape krahun e majte
+            Serial.print(F("LeftHatX: "));
+            Serial.print(Xbox.getAnalogHat(LeftHatX, i));
+            Serial.print("\t Writing Left Arm Value : ");
+            delay(10); 
+            leftVal +=2;
+            Serial.println(leftVal);
+            lArm.write(leftVal);
+          }
+          if (Xbox.getAnalogHat(RightHatX, i) > 7500 && rightVal < 175) {     //          Hape krahun e djathe
+            Serial.print(F("RightHatX: "));
+            Serial.print(Xbox.getAnalogHat(RightHatX, i));
+            Serial.print("\t Writing Right Arm Value : ");
+            delay(10);
+            rightVal +=2;
+            Serial.println(rightVal);
+            rArm.write(rightVal);
+
+          }
+          if (Xbox.getAnalogHat(RightHatX, i) < -7500 && rightVal > 40) {   //          Mbylle krahun e djathe
+            Serial.print(F("RightHatX: "));
+            Serial.print(Xbox.getAnalogHat(RightHatX, i));
+            Serial.print("\t Writing Right Arm Value : ");
+            delay(10);
+            rightVal -=2;
+            Serial.println(rightVal);
+            rArm.write(rightVal);
+          }
+          //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
           if (Xbox.getAnalogHat(LeftHatY, i) > 7500 || Xbox.getAnalogHat(LeftHatY, i) < -7500) {
             Serial.print(F("LeftHatY: "));
             Serial.print(Xbox.getAnalogHat(LeftHatY, i));
@@ -149,22 +167,31 @@ void loop() {
         if (Xbox.getButtonClick(START, i)) {
           Xbox.setLedMode(ALTERNATING, i);
           Serial.println(F("Start"));
+          autunomusOn = true;
+          autonomus(analogRead(leftSensor), analogRead(rightSensor));
         }
         if (Xbox.getButtonClick(BACK, i)) {
           Xbox.setLedBlink(ALL, i);
           Serial.println(F("Back"));
         }
-        if (Xbox.getButtonClick(L3, i))
+        if (Xbox.getButtonClick(L3, i)){
           Serial.println(F("L3"));
-        if (Xbox.getButtonClick(R3, i))
+          digitalWrite(relay, HIGH);}
+        if (Xbox.getButtonClick(R3, i)){ 
           Serial.println(F("R3"));
+          digitalWrite(relay, LOW);}
 
         if (Xbox.getButtonClick(L1, i))
           Serial.println(F("L1"));
         if (Xbox.getButtonClick(R1, i))
           Serial.println(F("R1"));
         if (Xbox.getButtonClick(XBOX, i)) {
-          Xbox.setLedMode(ROTATING, i);
+          if (Xbox.getBatteryLevel(i) == 1)
+            Xbox.setLedOn(LED1, i);
+          if (Xbox.getBatteryLevel(i) == 2)
+            Xbox.setLedOn(LED2, i);
+          if (Xbox.getBatteryLevel(i) == 3)
+            Xbox.setLedOn(LED3, i);
           Serial.print(F("Xbox (Battery: "));
           Serial.print(Xbox.getBatteryLevel(i)); // The battery level in the range 0-3
           Serial.println(F(")"));
@@ -175,61 +202,96 @@ void loop() {
 
 
 
-        if (Xbox.getButtonClick(A, i) && i <= 180){
-          Serial.println(F("A"));
-          i += 5;
-          delay(50);
-            tounge.write(i);
-          
-          Serial.println(F("Open \t\n"));          
-          }
-        if (Xbox.getButtonPress(Y, i) && i >= 0){
+        if (Xbox.getButtonPress(Y, i) && toungeVal < 180) {
           Serial.println(F("Y"));
-          delay(50);
-          i -= 5;
-            tounge.write(i);
-          
-          Serial.println(F("Close \t\n"));  
-          }
-
-
-        
-        if (Xbox.getButtonClick(B, i)){
+          toungeVal += 2;
+          delay(25);
+          tounge.write(toungeVal);
+          Serial.print(F("Open \t value: "));
+          Serial.println(toungeVal);
+        }
+        if (Xbox.getButtonPress(A, i) && toungeVal > 0) {
+          Serial.println(F("A"));
+          delay(25);
+          toungeVal -= 2;
+          tounge.write(toungeVal);
+          Serial.print(F("Close \t value: "));
+          Serial.println(toungeVal);
+        }
+        if (Xbox.getButtonClick(B, i)) {
           Serial.println(F("B"));
-          }
-        if (Xbox.getButtonClick(X, i)){
+        }
+        if (Xbox.getButtonClick(X, i)) {
           Serial.println(F("X"));
-          }
+        }
       }
     }
   }
 }
 
 
-void rf(int v){
-  analogWrite(rfPin, v);
+void rs() {
+  analogWrite(rfPin, 0);
+  analogWrite(rbPin, 0);
+}
+void ls() {
+  analogWrite(lfPin, 0);
+  analogWrite(lbPin, 0);
+}
+void rf(int v) {
+  analogWrite(rfPin, 255);
   analogWrite(rbPin, 0);
   Serial.print(F("Right Forward !! \t\n "));
 }
-void rb(){
+void rb() {
   analogWrite(rfPin, 0);
   analogWrite(rbPin, 255);
   Serial.print(F("Right Backwards !! \t\n "));
 }
-void lf(int v){
-  analogWrite(lfPin, v);
+void lf(int v) {
+  analogWrite(lfPin, 255);
   analogWrite(lbPin, 0);
   Serial.print(F("Left Forward !! \t\n "));
 }
-void lb(){
+void lb() {
   analogWrite(lfPin, 0);
   analogWrite(lbPin, 255);
   Serial.print(F("Left Backwards !! \t\n "));
 }
-void s(){
-  analogWrite(rfPin, 0);
-  analogWrite(rbPin, 0);
-  analogWrite(lfPin, 0);
-  analogWrite(lbPin, 0);
+
+
+void autonomus(int lsVal, int rsVal) {
+  int keyVal = 350; // Key Value for the given color...
+  while (autunomusOn) {
+    if (lsVal < keyVal) { // Roboti ka ecur shum nga ana e majte
+      lb();
+      rf(255);   // Kthehu djathtas
+    }
+    if (rsVal < keyVal) { // Roboti ka ecur shum nga ana e djathe
+      rb();
+      lf(255);   // kthehu majtas
+    }
+    //  if (dist < 10){  // Roboti ka me pak se 10 cm hapsire perpara tij
+    //    s(); // Ndalo!!!!!!!!!!!
+    //  }
+    if (rsVal < keyVal && lsVal < keyVal) {
+      ls();
+      rs();
+    }
+
+    else {        // ne te kundert ec drejt...
+      rf(255);
+      lf(255);
+    }
+  }
+  for (int p = 0; p < 10; p ++) {
+    rb();
+    lb();
+    delay(250);
+    lf(250);
+    rf(250);
+    delay(250);
+  }
+
 }
 
